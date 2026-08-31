@@ -1,12 +1,14 @@
-import { Router, Request, Response } from "express";
+import { Router, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { pool } from "../db";
 import { config } from "../config";
+import { RequestWithId } from "../middleware/requestId";
+import { log } from "../lib/logger";
 
 const router = Router();
 
-router.post("/login", async (req: Request, res: Response) => {
+router.post("/login", async (req: RequestWithId, res: Response) => {
   const { email, password } = req.body as { email?: string; password?: string };
   if (!email || !password) {
     res.status(400).json({ error: "email_and_password_required" });
@@ -17,6 +19,7 @@ router.post("/login", async (req: Request, res: Response) => {
     [email]
   );
   if (user.rowCount === 0) {
+    log("warn", "login_failed", { requestId: req.requestId, reason: "unknown_user" });
     res.status(401).json({ error: "invalid_credentials" });
     return;
   }
@@ -28,6 +31,7 @@ router.post("/login", async (req: Request, res: Response) => {
   };
   const ok = await bcrypt.compare(password, row.password_hash);
   if (!ok) {
+    log("warn", "login_failed", { requestId: req.requestId, reason: "bad_password" });
     res.status(401).json({ error: "invalid_credentials" });
     return;
   }
@@ -36,6 +40,7 @@ router.post("/login", async (req: Request, res: Response) => {
     config.jwtSecret,
     { algorithm: "HS256", expiresIn: "1h", issuer: config.jwtIssuer }
   );
+  log("info", "login_success", { requestId: req.requestId, userId: row.id });
   res.json({ accessToken, expiresIn: 3600 });
 });
 

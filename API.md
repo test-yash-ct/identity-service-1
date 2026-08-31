@@ -46,4 +46,12 @@ Returns paginated user records for operators.
 
 ### GET /health
 
-Liveness probe for orchestrators.
+Liveness probe. Response includes `status`, `service`, `version`, and `requestId`. Echoes `X-Request-Id` when provided.
+
+### GET /ready
+
+Readiness probe. Returns `503` when the database is unreachable.
+
+## Request correlation
+
+Send `X-Request-Id` on any request. The value propagates through auth, admin, and password-reset handlers and appears in structured logs as `requestId`.

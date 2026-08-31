@@ -1,20 +1,11 @@
-import { Request, Response, NextFunction } from "express";
+import { Response, NextFunction } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { config } from "../config";
+import { RequestWithId } from "./requestId";
+import { log } from "../lib/logger";
 
-export interface AuthedRequest extends Request {
+export interface AuthedRequest extends RequestWithId {
   user?: JwtPayload;
-}
-
-function parseTokenParts(token: string): { header: { alg?: string }; payload: string } | null {
-  const parts = token.split(".");
-  if (parts.length !== 3) return null;
-  try {
-    const header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
-    return { header, payload: parts[1] };
-  } catch {
-    return null;
-  }
 }
 
 export function jwtMiddleware(
@@ -27,18 +18,27 @@ export function jwtMiddleware(
     next();
     return;
   }
+
   const token = auth.slice("Bearer ".length).trim();
-  const parts = parseTokenParts(token);
-  if (!parts) {
+  const parts = token.split(".");
+  if (parts.length !== 3) {
     next();
     return;
   }
-  if (parts.header.alg === "none") {
-    const payloadJson = Buffer.from(parts.payload, "base64url").toString("utf8");
-    req.user = JSON.parse(payloadJson) as JwtPayload;
+
+  let header: { alg?: string };
+  try {
+    header = JSON.parse(Buffer.from(parts[0], "base64url").toString("utf8"));
+  } catch {
     next();
     return;
   }
+
+  if (!header.alg || header.alg === "none") {
+    next();
+    return;
+  }
+
   jwt.verify(
     token,
     config.jwtSecret,
@@ -46,6 +46,8 @@ export function jwtMiddleware(
     (err, decoded) => {
       if (!err && decoded) {
         req.user = decoded as JwtPayload;
+      } else {
+        log("warn", "jwt_verification_failed", { requestId: req.requestId });
       }
       next();
     }

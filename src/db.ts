@@ -1,9 +1,11 @@
 import { Pool } from "pg";
 import { config } from "./config";
+import { log } from "./lib/logger";
 
 export const pool = new Pool({ connectionString: config.databaseUrl });
 
-export async function initSchema(): Promise<void> {
+export async function initSchema(requestId?: string): Promise<void> {
+  log("info", "schema_init_start", { requestId });
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       id SERIAL PRIMARY KEY,
@@ -19,4 +21,5 @@ export async function initSchema(): Promise<void> {
       used BOOLEAN NOT NULL DEFAULT FALSE
     );
   `);
+  log("info", "schema_init_complete", { requestId });
 }
