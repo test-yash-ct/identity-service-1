@@ -10,7 +10,7 @@ Platform Security owns tier-1 on-call for authentication outages.
 |----------|---------|-------------|
 | `SERVICE_NAME` | `identity-service` | Log and health identity |
 | `LOG_LEVEL` | `info` | Log verbosity |
-| `REQUEST_ID_HEADER` | `X-Request-Id` | Correlation header name |
+| `REQUEST_ID_HEADER` | `X-Request-Id` | Correlation header name (max 128 token chars; invalid values become a UUID) |
 
 ## Probes
 
