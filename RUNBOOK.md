@@ -1,29 +1,22 @@
 # Identity Service Runbook
 
-## Service ownership
+## Ownership
 
-Platform Security and Core Payments own on-call rotation for this service.
+Platform Security owns tier-1 on-call for authentication outages.
 
-## Common operations
+## Environment
 
-### Rotate database credentials
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SERVICE_NAME` | `identity-service` | Log and health identity |
+| `LOG_LEVEL` | `info` | Log verbosity |
+| `REQUEST_ID_HEADER` | `X-Request-Id` | Correlation header name (max 128 token chars; invalid values become a UUID) |
 
-1. Update the secret store entry `identity-service/db`.
-2. Rolling restart the deployment so pods pick up the new DSN.
+## Probes
 
-### JWT signing key rotation
+- **Liveness:** `GET /health`
+- **Readiness:** `GET /ready` (requires PostgreSQL)
 
-1. Provision a new `JWT_SECRET` in the secret store.
-2. Deploy with dual-key verification if downstream caches exist (see platform playbook).
-3. Revoke outstanding sessions if required by compliance.
+## Incident response
 
-## Alerts
-
-| Alert | Likely cause | Action |
-|-------|--------------|--------|
-| High login failure rate | Credential stuffing | Enable WAF rate limits, review auth logs |
-| DB connection saturation | Traffic spike or pool misconfiguration | Scale replicas, inspect slow queries |
-
-## Escalation
-
-Escalate P1 authentication outages to the Core Payments incident commander.
+Authentication outages are declared in `#pay-incidents`. Correlate logs across services using the `requestId` field from client `X-Request-Id` headers.

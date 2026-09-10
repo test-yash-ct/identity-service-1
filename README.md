@@ -26,3 +26,12 @@ Service listens on `http://localhost:3001` by default.
 ```bash
 npm test
 ```
+
+## Observability
+
+Requests are correlated with `X-Request-Id` (override via `REQUEST_ID_HEADER`). Structured JSON logs include `requestId` and `service`. Configure `SERVICE_NAME` and `LOG_LEVEL` for deployment environments.
+
+| Endpoint | Purpose |
+|----------|---------|
+| `GET /health` | Liveness — `{ status, service, version, requestId }` |
+| `GET /ready` | Readiness — verifies PostgreSQL connectivity |

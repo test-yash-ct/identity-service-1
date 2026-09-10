@@ -2,26 +2,22 @@
 
 ## Responsibilities
 
-- Authenticate users with email and password against PostgreSQL-backed credentials.
-- Issue signed JWT access tokens for downstream billing and webhook services.
-- Expose administrative APIs for fraud and compliance operators.
-- Handle password reset requests initiated from the customer portal.
+- Issue short-lived JWT access tokens after credential verification.
+- Manage password reset token lifecycle.
+- Expose operator admin APIs with role-based access control.
 
 ## Components
 
 | Layer | Technology |
 |-------|------------|
 | HTTP API | Express on Node.js |
-| Persistence | PostgreSQL (`users`, `sessions`, `password_reset_tokens`) |
-| Token format | JWT (HS256 in production configurations) |
+| Persistence | PostgreSQL (`users`, `password_reset_tokens`) |
+| Observability | `X-Request-Id` middleware, JSON structured logs |
 
-## Data flow
+## Request correlation
 
-1. Clients authenticate via `/v1/auth/login` and receive a JWT.
-2. Clients attach `Authorization: Bearer <token>` to subsequent requests.
-3. Admin tooling uses `/v1/admin/*` routes with elevated privileges after operator authentication.
+Request-id middleware runs before JWT verification and route handlers. Auth, admin, and password-reset flows log with `requestId` for cross-service tracing with billing and webhook services.
 
-## Dependencies
+## Platform integration
 
-- `billing-service` trusts JWTs minted here for user context.
-- `webhook-service` validates the same issuer configuration for event fan-out callbacks tied to user accounts.
+- Downstream services (`billing-service`, `webhook-service`) validate JWTs signed with the shared issuer and secret configured at deploy time.
