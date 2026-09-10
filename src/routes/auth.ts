@@ -1,10 +1,7 @@
 import { Router, Response } from "express";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
-import { insertAuditEvent, pool } from "../db";
-import { config } from "../config";
 import { RequestWithId } from "../middleware/requestId";
 import { log } from "../lib/logger";
+import { authenticateUser, DomainError } from "../domain/auth";
 
 const router = Router();
 
@@ -14,39 +11,31 @@ router.post("/login", async (req: RequestWithId, res: Response) => {
     res.status(400).json({ error: "email_and_password_required" });
     return;
   }
-  const user = await pool.query(
-    "SELECT id, email, password_hash, role FROM users WHERE email = $1",
-    [email]
-  );
-  if (user.rowCount === 0) {
-    log("warn", "login_failed", { requestId: req.requestId, reason: "unknown_user" });
-    res.status(401).json({ error: "invalid_credentials" });
-    return;
+  try {
+    const result = await authenticateUser({
+      email,
+      password,
+      requestId: req.requestId || "unknown",
+    });
+    log("info", "login_success", { requestId: req.requestId, userId: result.event.payload.userId });
+    res.json({
+      accessToken: result.accessToken,
+      expiresIn: result.expiresIn,
+      event: result.event,
+    });
+  } catch (err) {
+    if (err instanceof DomainError) {
+      if (err.code === "invalid_credentials") {
+        log("warn", "login_failed", {
+          requestId: req.requestId,
+          reason: "rejected",
+        });
+      }
+      res.status(err.httpStatus).json({ error: err.code });
+      return;
+    }
+    throw err;
   }
-  const row = user.rows[0] as {
-    id: number;
-    email: string;
-    password_hash: string;
-    role: string;
-  };
-  const ok = await bcrypt.compare(password, row.password_hash);
-  if (!ok) {
-    log("warn", "login_failed", { requestId: req.requestId, reason: "bad_password" });
-    res.status(401).json({ error: "invalid_credentials" });
-    return;
-  }
-  const accessToken = jwt.sign(
-    { sub: String(row.id), role: row.role, email: row.email },
-    config.jwtSecret,
-    { algorithm: "HS256", expiresIn: "1h", issuer: config.jwtIssuer }
-  );
-  log("info", "login_success", { requestId: req.requestId, userId: row.id });
-  await insertAuditEvent({
-    action: "login_success",
-    requestId: req.requestId,
-    actor: String(row.id),
-  });
-  res.json({ accessToken, expiresIn: 3600 });
 });
 
 export default router;

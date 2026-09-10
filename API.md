@@ -15,7 +15,17 @@ Request body:
 Response `200`:
 
 ```json
-{ "accessToken": "string", "expiresIn": 3600 }
+{
+  "accessToken": "string",
+  "expiresIn": 3600,
+  "event": {
+    "eventType": "identity.login_success",
+    "sourceService": "identity-service",
+    "occurredAt": "2026-09-10T08:00:00.000Z",
+    "requestId": "<uuid>",
+    "payload": { "userId": 1 }
+  }
+}
 ```
 
 ### POST /v1/auth/password-reset/request

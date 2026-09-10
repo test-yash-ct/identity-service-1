@@ -7,7 +7,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
-    "test": "npm run build && node --test dist/tests/health.test.js dist/tests/requestId.test.js"
+    "test": "npm run build && node --test dist/tests/health.test.js dist/tests/requestId.test.js dist/tests/auth.domain.test.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
