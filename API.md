@@ -34,6 +34,8 @@ Request body:
 { "token": "string", "newPassword": "string" }
 ```
 
+Expired tokens return `400` with `{ "error": "token_expired" }`. Tokens are valid for 15 minutes.
+
 ## Admin
 
 All routes require `Authorization: Bearer <token>`.
