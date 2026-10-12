@@ -36,16 +36,25 @@ router.post("/confirm", async (req: RequestWithId, res: Response) => {
     return;
   }
   const row = await pool.query(
-    `SELECT id, user_id, used FROM password_reset_tokens WHERE token = $1`,
+    `SELECT id, user_id, used, expires_at FROM password_reset_tokens WHERE token = $1`,
     [token]
   );
   if (row.rowCount === 0) {
     res.status(400).json({ error: "invalid_token" });
     return;
   }
-  const rec = row.rows[0] as { id: number; user_id: number; used: boolean };
+  const rec = row.rows[0] as {
+    id: number;
+    user_id: number;
+    used: boolean;
+    expires_at: Date | string;
+  };
   if (rec.used) {
     res.status(400).json({ error: "token_already_used" });
+    return;
+  }
+  if (new Date(rec.expires_at).getTime() <= Date.now()) {
+    res.status(400).json({ error: "token_expired" });
     return;
   }
   const hash = await bcrypt.hash(newPassword, 10);
